@@ -1,3 +1,6 @@
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -6,32 +9,24 @@ namespace Unified.UniversalBlur.Runtime
 {
     public class UniversalBlurFeature : ScriptableRendererFeature
     {
-        [Header("Blur Settings")]
-        [Range(1, 12)] [SerializeField] private int iterations = 4;
-        [Range(1f, 10f)] [SerializeField] private float downsample = 2.0f;
+        [SerializeField]
+        private UniversalBlurFeatureSettings settings;
+        public UniversalBlurFeatureSettings Settings => settings;
+
+        private int iterations => settings.iterations;
+        private float downsample => settings.downsample;
         
-        [Tooltip("Enable mipmaps for more efficient blur")]
-        [SerializeField] private bool enableMipMaps = true;
-        // [Range(0f, 10f)] 
-        [SerializeField] private float scale = 1f;
-        // [Range(0f, 10f)] 
-        [SerializeField] private float offset = 1f;
+        private bool enableMipMaps => settings.enableMipMaps;
+        private float scale => settings.scale;
+        private float offset => settings.offset;
         
-        [Space]
+        private ScaleBlurWith scaleBlurWith => settings.scaleBlurWith;
+        private float scaleReferenceSize => settings.scaleReferenceSize;
         
-        [Header("Advanced Settings")]
-        [SerializeField] private ScaleBlurWith scaleBlurWith = ScaleBlurWith.ScreenHeight;
-        [SerializeField] private float scaleReferenceSize = 1080f;
-        
-        [Space]
-        
-        // [SerializeField, ShowAsPass(nameof(_material))] public int shaderPass;
-        [SerializeField] private BlurType blurType;
-        
-        [Tooltip("For Overlay Canvas: AfterRenderingPostProcessing" +
-                 "\n\nOther: BeforeRenderingTransparents (will hide transparents)")]
-        [SerializeField] private RenderPassEvent injectionPoint = RenderPassEvent.AfterRenderingPostProcessing;
-        
+        private BlurType blurType => settings.blurType;
+
+        private RenderPassEvent injectionPoint => settings.injectionPoint;
+
         private float _intensity = 1.0f;
         
         [SerializeField]
@@ -49,6 +44,31 @@ namespace Unified.UniversalBlur.Runtime
             get => _intensity;
             set => _intensity = Mathf.Clamp(value, 0f, 1f);
         }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            if (settings == null)
+            {
+                var assetPath = "Assets/Settings/UniversalBlurFeatureSettings.asset";
+                var asset = AssetDatabase.LoadAssetAtPath<UniversalBlurFeatureSettings>(assetPath);
+
+                if (asset == null)
+                {
+                    asset = CreateInstance<UniversalBlurFeatureSettings>();
+                    AssetDatabase.CreateAsset(asset, assetPath);
+                    AssetDatabase.SaveAssets();
+                }
+
+                settings = asset;
+            }
+
+            if (RenderPipelineManager.currentPipeline is UniversalRenderPipeline)
+            {
+                Create();
+            }
+        }
+#endif
 
         /// <inheritdoc/>
         public override void Create()
@@ -125,7 +145,9 @@ namespace Unified.UniversalBlur.Runtime
                 BlurType = blurType,
                 Iterations = iterations,
                 
-                EnableMipMaps = enableMipMaps
+                EnableMipMaps = enableMipMaps,
+
+                settings = settings,
             };
         }
 

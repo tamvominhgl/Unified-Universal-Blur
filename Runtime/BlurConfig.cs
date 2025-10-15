@@ -17,5 +17,7 @@ namespace Unified.UniversalBlur.Runtime
         public int Height;
 
         public bool EnableMipMaps;
+
+        public UniversalBlurFeatureSettings settings;
     }
 }

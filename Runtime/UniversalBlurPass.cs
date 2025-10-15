@@ -34,6 +34,38 @@ namespace Unified.UniversalBlur.Runtime
         public void Setup(BlurConfig blurConfig)
         {
             _blurConfig = blurConfig;
+
+            var settings = blurConfig.settings;
+            if (settings.RTWidth != blurConfig.Width || settings.RTHeight != blurConfig.Height)
+            {
+                settings.RTWidth = blurConfig.Width;
+                settings.RTHeight = blurConfig.Height;
+
+                if (settings.SourceRT != null)
+                {
+                    UnityEngine.Object.Destroy(settings.SourceRT);
+                }
+
+                if (settings.DestinationRT != null)
+                {
+                    UnityEngine.Object.Destroy(settings.DestinationRT);
+                }
+
+                var descriptor = new RenderTextureDescriptor(blurConfig.Width, blurConfig.Height, GraphicsFormat.B10G11R11_UFloatPack32, 0)
+                {
+                    useMipMap = settings.enableMipMaps,
+                    autoGenerateMips = settings.enableMipMaps
+                };
+
+                settings.SourceRT = new(descriptor);
+                settings.SourceRT.Create();
+
+                settings.DestinationRT = new(descriptor);
+                settings.DestinationRT.Create();
+            }
+
+            _sourceRT = RTHandles.Alloc(settings.SourceRT);
+            _destinationRT = RTHandles.Alloc(settings.DestinationRT);
         }
 
         public void Dispose()
@@ -60,13 +92,13 @@ namespace Unified.UniversalBlur.Runtime
 
             var descriptor = GetDescriptor();
 
-#if UNITY_6000_0_OR_NEWER
-            RenderingUtils.ReAllocateHandleIfNeeded(ref _sourceRT, descriptor, FilterMode.Bilinear, TextureWrapMode.Clamp, name: k_BlurTextureSourceName);
-            RenderingUtils.ReAllocateHandleIfNeeded(ref _destinationRT, descriptor, FilterMode.Bilinear, TextureWrapMode.Clamp, name: k_BlurTextureDestinationName);
-            #else
-            RenderingUtils.ReAllocateIfNeeded(ref _sourceRT, descriptor, FilterMode.Bilinear, TextureWrapMode.Clamp, name: k_BlurTextureSourceName);
-            RenderingUtils.ReAllocateIfNeeded(ref _destinationRT, descriptor, FilterMode.Bilinear, TextureWrapMode.Clamp, name: k_BlurTextureDestinationName);
-            #endif
+// #if UNITY_6000_0_OR_NEWER
+//             RenderingUtils.ReAllocateHandleIfNeeded(ref _sourceRT, descriptor, FilterMode.Bilinear, TextureWrapMode.Clamp, name: k_BlurTextureSourceName);
+//             RenderingUtils.ReAllocateHandleIfNeeded(ref _destinationRT, descriptor, FilterMode.Bilinear, TextureWrapMode.Clamp, name: k_BlurTextureDestinationName);
+// #else
+//             RenderingUtils.ReAllocateIfNeeded(ref _sourceRT, descriptor, FilterMode.Bilinear, TextureWrapMode.Clamp, name: k_BlurTextureSourceName);
+//             RenderingUtils.ReAllocateIfNeeded(ref _destinationRT, descriptor, FilterMode.Bilinear, TextureWrapMode.Clamp, name: k_BlurTextureDestinationName);
+// #endif
             
 
             var colorTarget = renderingData.cameraData.renderer.cameraColorTargetHandle;
@@ -105,11 +137,14 @@ namespace Unified.UniversalBlur.Runtime
             
             var descriptor = new TextureDesc(GetDescriptor());
 
-            descriptor.name = k_BlurTextureSourceName;
-            TextureHandle source = renderGraph.CreateTexture(descriptor);
-            descriptor.name = k_BlurTextureDestinationName;
-            TextureHandle destination = renderGraph.CreateTexture(descriptor);
-            
+            // descriptor.name = k_BlurTextureSourceName;
+            // TextureHandle source = renderGraph.CreateTexture(descriptor);
+            // descriptor.name = k_BlurTextureDestinationName;
+            // TextureHandle destination = renderGraph.CreateTexture(descriptor);
+
+            var source = renderGraph.ImportTexture(_sourceRT);
+            var destination = renderGraph.ImportTexture(_destinationRT);
+
             using (var builder = renderGraph.AddUnsafePass<RenderGraphPassData>(k_PassName, out var passData, _profilingSampler))
             {
                 passData.ColorSource = cameraColorSource;
