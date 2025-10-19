@@ -6,6 +6,10 @@ namespace Unified.UniversalBlur.Runtime
 {
     public class UniversalBlurFeatureSettings : ScriptableObject
     {
+        public static UniversalBlurFeatureSettings Default { get; private set; }
+
+        [SerializeField] bool isDefault = false;
+
         [Header("Blur Settings")]
         [Range(1, 12)] [SerializeField] public int iterations = 4;
         [Range(1f, 10f)] [SerializeField] public float downsample = 2.0f;
@@ -36,6 +40,22 @@ namespace Unified.UniversalBlur.Runtime
         [NonSerialized] public RenderTexture DestinationRT;
         [NonSerialized] public int RTWidth;
         [NonSerialized] public int RTHeight;
+
+        void OnEnable()
+        {
+            if (isDefault)
+            {
+                Default = this;
+            }
+        }
+
+        void OnDestroy()
+        {
+            if (Default == this)
+            {
+                Default = null;
+            }
+        }
 
         public void SetGlobalTexture()
         {
