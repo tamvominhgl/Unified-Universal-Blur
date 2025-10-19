@@ -45,9 +45,10 @@ namespace Unified.UniversalBlur.Runtime
             set => _intensity = Mathf.Clamp(value, 0f, 1f);
         }
 
-#if UNITY_EDITOR
-        private void OnValidate()
+        /// <inheritdoc/>
+        public override void Create()
         {
+#if UNITY_EDITOR
             if (settings == null)
             {
                 var assetPath = "Assets/Settings/UniversalBlurFeatureSettings.asset";
@@ -62,17 +63,7 @@ namespace Unified.UniversalBlur.Runtime
 
                 settings = asset;
             }
-
-            if (RenderPipelineManager.currentPipeline is UniversalRenderPipeline)
-            {
-                Create();
-            }
-        }
 #endif
-
-        /// <inheritdoc/>
-        public override void Create()
-        {
             _blurPass = new UniversalBlurPass();
             _blurPass.renderPassEvent = injectionPoint;
         }
